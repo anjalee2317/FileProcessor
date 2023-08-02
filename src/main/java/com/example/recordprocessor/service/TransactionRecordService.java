@@ -6,7 +6,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -14,11 +17,11 @@ public class TransactionRecordService {
 
     private final TransactionRecordRepository transactionRecordRepository;
 
-    @Autowired
     public TransactionRecordService(TransactionRecordRepository transactionRecordRepository) {
         this.transactionRecordRepository = transactionRecordRepository;
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public TransactionRecord saveTransactions(TransactionRecord transactionRecord) {
         return transactionRecordRepository.save(transactionRecord);
     }
@@ -27,11 +30,11 @@ public class TransactionRecordService {
         return transactionRecordRepository.findById(id).orElse(null);
     }
 
-    public Page<TransactionRecord> getTransactionRecordsByQuery(String customerId, String accountNumber,
+    public Page<TransactionRecord> getTransactionRecordsByQuery(String customerId, List<String> accountNumbers,
                                                                 String description, int page, int size) {
 
         return transactionRecordRepository.findByCustomerIdOrAccountNumberInOrDescriptionContainingIgnoreCase(customerId,
-                accountNumber, description, PageRequest.of(page, size));
+                accountNumbers, description, PageRequest.of(page, size));
     }
 
     public Page<TransactionRecord> getTransactionRecords(int page, int size) {
