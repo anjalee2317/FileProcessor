@@ -22,7 +22,7 @@ public class TransactionRecordService {
     }
 
     @Transactional(isolation = Isolation.READ_COMMITTED)
-    public TransactionRecord saveTransactions(TransactionRecord transactionRecord) {
+    public TransactionRecord saveTransactionRecord(TransactionRecord transactionRecord) {
         return transactionRecordRepository.save(transactionRecord);
     }
 
