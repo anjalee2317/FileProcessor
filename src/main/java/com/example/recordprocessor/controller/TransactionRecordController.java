@@ -34,15 +34,23 @@ public class TransactionRecordController {
         try (Stream<String> lines = Files.lines(Paths.get(filePath))) {
             List<TransactionRecord> transactions = lines.skip(1) // Skip the first row (header) of the file
                     .map(line -> Arrays.asList(line.split("\\|")))
-                    .map(data ->
-                            TransactionRecord.builder()
+                    .map(data -> {
+                        // Check if data has at least 6 elements to create a TransactionRecord
+                        if (data.size() >= 6) {
+                            return TransactionRecord.builder()
                                     .accountNumber(data.get(0))
                                     .transactionAmount(data.get(1))
                                     .description(data.get(2))
                                     .transactionDate(data.get(3))
                                     .transactionTime(data.get(4))
                                     .customerId(data.get(5))
-                                    .build()).toList();
+                                    .build();
+                        } else {
+                            log.error("Data does not have enough elements to create a TransactionRecord object: {}", data);
+                            throw new IllegalArgumentException("Data does not have enough elements to create a TransactionRecord object");
+                        }
+                    })
+                    .toList();
 
             List<TransactionRecord> batchList = new ArrayList<>();
             for (TransactionRecord transaction : transactions) {
