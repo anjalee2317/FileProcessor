@@ -7,7 +7,6 @@ import lombok.extern.log4j.Log4j2;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -16,7 +15,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Stream;
@@ -58,6 +56,7 @@ public class TransactionRecordController {
             if (!batchList.isEmpty()) {
                 transactionRecordService.saveTransactionsByBatches(batchList);
             }
+            log.info("Successfully processed the file and saved to database");
         } catch (IOException e) {
             log.error("An unexpected exception occurred during file reading ", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -70,53 +69,41 @@ public class TransactionRecordController {
 
     @GetMapping("/retrieve")
     public ResponseEntity<Page<TransactionRecord>> retrieveTransactionRecords(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
-        Page<TransactionRecord> records = transactionRecordService.getTransactionRecords(page, size);
-        if (records.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } else {
-            return new ResponseEntity<>(records, HttpStatus.OK);
+        try {
+            Page<TransactionRecord> records = transactionRecordService.getTransactionRecords(page, size);
+
+            if (records.isEmpty()) {
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            } else {
+                return new ResponseEntity<>(records, HttpStatus.OK);
+            }
+        } catch (Exception e) {
+            log.error("An unexpected exception occurred while retrieving records", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
     @GetMapping("/search")
     public ResponseEntity<Page<TransactionRecord>> searchTransactionRecords(@RequestParam(required = false) String customerId, @RequestParam(required = false) List<String> accountNumbers,
-                                                                         @RequestParam(required = false) String description, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
-        // Fetch records based on the given parameters
-        Page<TransactionRecord> records = transactionRecordService.getTransactionRecordsByQuery(
-                customerId, accountNumbers, description, page, size);
+                                                                            @RequestParam(required = false) String description, @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+        try {
+            // Fetch records based on the given parameters
+            Page<TransactionRecord> records = transactionRecordService.getTransactionRecordsByQuery(
+                    customerId, accountNumbers, description, page, size);
 
-        if (records.isEmpty()) {
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
-        } else {
-            return new ResponseEntity<>(records, HttpStatus.OK);
-        }
-    }
-
-
-    @Async
-    @PatchMapping("/update-data")
-    public CompletableFuture<Void> updateRecords(@RequestBody List<TransactionRecord> updatedDataRecords) {
-        for (TransactionRecord updatedRecord : updatedDataRecords) {
-            processTransactionRecord(updatedRecord);
-        }
-        return CompletableFuture.completedFuture(null);
-    }
-
-    private void processTransactionRecord(TransactionRecord updatedRecord) {
-
-        if (updatedRecord.getId() == null) {
-            transactionRecordService.saveTransactionRecord(updatedRecord);
-        } else {
-            TransactionRecord existingTransaction = transactionRecordService.getTransactionsById(updatedRecord.getId());
-
-            if (existingTransaction != null) {
-                existingTransaction.setDescription(updatedRecord.getDescription());
-                transactionRecordService.saveTransactionRecord(existingTransaction);
+            if (records.isEmpty()) {
+                return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            } else {
+                return new ResponseEntity<>(records, HttpStatus.OK);
             }
+        } catch (Exception e) {
+            log.error("An unexpected exception occurred while searching records", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
-    @PostMapping("/update")
+
+    @PatchMapping("/update")
     public ResponseEntity<Void> updateTransactionRecords(@RequestBody List<TransactionRecord> updatedDataRecords) {
 
         try {
@@ -124,15 +111,10 @@ public class TransactionRecordController {
 
             for (TransactionRecord updatedRecord : updatedDataRecords) {
                 threadPool.submit(() -> {
-                    if (updatedRecord.getId() == null) {
-                        transactionRecordService.saveTransactionRecord(updatedRecord);
-                    } else {
-                        TransactionRecord existingTransaction = transactionRecordService.getTransactionsById(updatedRecord.getId());
-
-                        if (existingTransaction != null) {
-                            existingTransaction.setDescription(updatedRecord.getDescription());
-                            transactionRecordService.saveTransactionRecord(existingTransaction);
-                        }
+                    TransactionRecord existingTransaction = transactionRecordService.getTransactionsById(updatedRecord.getId());
+                    if (existingTransaction != null) {
+                        existingTransaction.setDescription(updatedRecord.getDescription());
+                        transactionRecordService.saveTransactionRecord(existingTransaction);
                     }
                 });
             }
