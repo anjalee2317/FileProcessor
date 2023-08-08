@@ -4,6 +4,8 @@ import com.example.recordprocessor.model.TransactionRecord;
 import com.example.recordprocessor.repository.TransactionRecordRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,8 +33,10 @@ public class TransactionRecordService {
     public Page<TransactionRecord> getTransactionRecordsByQuery(String customerId, List<String> accountNumbers,
                                                                 String description, int page, int size) {
 
+        Pageable sortedByAccountNumber =
+                PageRequest.of(page, size, Sort.by("accountNumber").ascending());
         return transactionRecordRepository.findByCustomerIdOrAccountNumberInOrDescriptionContainingIgnoreCase(customerId,
-                accountNumbers, description, PageRequest.of(page, size));
+                accountNumbers, description, sortedByAccountNumber);
     }
 
     public Page<TransactionRecord> getTransactionRecords(int page, int size) {
