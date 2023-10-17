@@ -14,7 +14,8 @@ import java.time.OffsetDateTime;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "TRANSACTION_RECORD")
+//@Table(name = "TRANSACTION_RECORD")
+@Table(name= "TRANSACTION_RECORD", schema = "transactionrecord")
 public class TransactionRecord implements Serializable {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
